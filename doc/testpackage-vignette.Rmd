@@ -1,0 +1,130 @@
+---
+title: "Vignette for the test package from the Building R Packages course in Coursera"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{testpackage-vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(testpackagedevtools)
+```
+
+# Overview
+
+This package provides functions for working with accident data stored in compressed CSV files. The main tasks covered by the package are:
+
+- generating file names from years
+- reading a single accident file, corresponding to a single year
+- reading several accident files of different years at once
+- summarizing accident counts by month and year
+- plotting accidents for a given state on a map
+
+# Create a file name from a year
+
+The function `make_filename()` converts a year into the expected compressed file name format.
+
+```{r}
+make_filename(2013)
+make_filename("2015")
+```
+
+This is useful when the data files follow a consistent naming convention such as the following included example files:
+
+```r
+accident_2013.csv.bz2
+accident_2014.csv.bz2
+accident_2015.csv.bz2
+```
+
+# Read a single accident file
+
+The function `fars_read()` reads one local compressed CSV file and returns a tibble.
+
+```{r, eval = FALSE}
+dat <- fars_read("accident_2013.csv.bz2")
+dat
+```
+
+The function checks whether the file exists before attempting to read it. If the file is missing, it throws an error.
+
+```{r, eval = FALSE}
+fars_read("does_not_exist.csv.bz2")
+```
+
+# Read several years at once
+
+The function `fars_read_years()` takes a vector of years and tries to read the corresponding files. For each valid file, it returns a tibble containing only the `MONTH` column and an additional `year` column.
+
+```{r, eval = FALSE}
+year_list <- fars_read_years(c("2013", "2014", "2015"))
+year_list
+```
+
+The output is a list, with one element per requested year.
+
+For missing or invalid years, the function returns `NULL` for that element and issues a warning instead of stopping completely.
+
+```{r, eval = FALSE}
+year_list <- fars_read_years(c("2013", "2014", "2012"))
+year_list
+```
+
+This makes it possible to process a vector of years even if some files are not available.
+
+# Summarize accident counts by month and year
+
+The function `fars_summarize_years()` combines the yearly data and counts how many accidents are recorded for each month in each year.
+
+```{r, eval = FALSE}
+summary_tbl <- fars_summarize_years(c("2013", "2014", "2015"))
+summary_tbl
+```
+
+The result is a tibble where:
+
+- each row represents a month
+- each year becomes a separate column
+- the values show the number of accidents for that month and year
+
+This is useful for comparing seasonal patterns across years.
+
+# Plot accidents for one state
+
+The function `fars_map_state()` plots the accident locations for a selected year and U.S. state.
+
+```{r, eval = FALSE}
+fars_map_state(state.num = 1, year = 2013)
+```
+
+The `state.num` argument must match a valid state code present in the data. If the state code is invalid, the function stops with an error.
+
+```{r, eval = FALSE}
+fars_map_state(state.num = 100, year = 2013)
+```
+
+The function also handles invalid coordinates by converting out-of-range latitude and longitude values to missing values before plotting.
+
+# A complete example workflow
+
+The following example shows how the package functions can be used together.
+
+```{r, eval = FALSE}
+file_2013 <- make_filename(2013)
+
+dat_2013 <- fars_read(file_2013)
+
+year_data <- fars_read_years(c(2013, 2014, 2015))
+
+year_summary <- fars_summarize_years(c(2013, 2014, 2015))
+
+fars_map_state(state.num = 1, year = 2013)
+```
